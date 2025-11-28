@@ -1,0 +1,289 @@
+import React, { useState } from 'react';
+import { Download, Search, Database, MapPin, Loader2, AlertCircle, Building2, Phone, Globe, CheckCircle } from 'lucide-react';
+
+export default function LeadScraperDashboard() {
+  const [keyword, setKeyword] = useState('');
+  const [location, setLocation] = useState('');
+  const [isScraping, setIsScraping] = useState(false);
+  const [leads, setLeads] = useState([]);
+  const [logs, setLogs] = useState([]); 
+  const [error, setError] = useState('');
+
+  // Helper to add logs to the UI
+  const addLog = (message) => {
+    setLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), message }]);
+  };
+
+  // Custom CSV Download Function
+  const downloadCSV = () => {
+    if (leads.length === 0) return;
+
+    const headers = ['Name', 'Address', 'Phone', 'Rating', 'Reviews', 'Website', 'Google Maps Link'];
+    const csvContent = [
+      headers.join(','),
+      ...leads.map(row => [
+        `"${row.name || ''}"`,
+        `"${row.address || ''}"`,
+        `"${row.phone || ''}"`,
+        `"${row.rating || ''}"`,
+        `"${row.reviews || ''}"`,
+        `"${row.website || ''}"`,
+        `"${row.googleMapsLink || ''}"`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `leads-${keyword}-${location}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const handleStartScrape = async (e) => {
+    e.preventDefault();
+    if (!keyword || !location) return;
+
+    setIsScraping(true);
+    setError('');
+    setLeads([]);
+    setLogs([]);
+    
+    addLog(`Initializing scraper for "${keyword}" in "${location}"...`);
+    addLog(`Please wait. This process opens a browser on the server.`);
+
+    try {
+      // --- REAL API CALL TO YOUR BACKEND ---
+      const response = await fetch('/api/scrape', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ keyword, location }),
+      });
+
+      // Handle non-JSON responses
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Received non-JSON response from server. Is the API route created correctly?");
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch data');
+      }
+
+      if (data.success) {
+        setLeads(data.data);
+        addLog(`Success! Found ${data.count} leads.`);
+        addLog(`Saved ${data.newlySaved} new unique leads to MongoDB.`);
+      } else {
+        setError(data.message);
+        addLog(`Error: ${data.message}`);
+      }
+
+    } catch (err) {
+      console.error(err);
+      
+      // Error handling for when Backend is missing (Localhost vs Preview)
+      if (err.message.includes('Failed to parse URL') || err.message.includes('NetworkError') || err.message.includes('JSON')) {
+        setError('⚠️ BACKEND ERROR: Could not connect to /api/scrape. Make sure your Next.js server is running.');
+        addLog('Error: Backend API is unreachable.');
+      } else {
+        setError(err.message || 'Something went wrong.');
+        addLog(`Critical Error: ${err.message}`);
+      }
+    } finally {
+      setIsScraping(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans p-4 md:p-8">
+      <div className="max-w-6xl mx-auto space-y-6">
+        
+        {/* HEADER */}
+        <header className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <div>
+            <h1 className="text-2xl font-bold text-blue-700 flex items-center gap-2">
+              <Database className="w-8 h-8" />
+              KTYM Lead Engine
+            </h1>
+            <p className="text-slate-500 mt-1">Real-Time Google Maps Scraper</p>
+          </div>
+          <div className="flex items-center gap-3 mt-4 md:mt-0 bg-blue-50 px-4 py-2 rounded-full border border-blue-100">
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <span className="text-sm font-medium text-blue-800">System Ready</span>
+          </div>
+        </header>
+
+        {/* CONTROLS */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* INPUT FORM */}
+          <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-fit">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Search className="w-5 h-5 text-slate-400" />
+              Target Parameters
+            </h2>
+            
+            <form onSubmit={handleStartScrape} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Business Type</label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                  <input 
+                    type="text" 
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    placeholder="e.g. Real Estate, Dentist"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                  <input 
+                    type="text" 
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    placeholder="e.g. Patna, Bihar"
+                    required
+                  />
+                </div>
+              </div>
+
+              <button 
+                type="submit"
+                disabled={isScraping}
+                className={`w-full py-3 px-4 rounded-xl font-bold text-white shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] ${
+                  isScraping 
+                    ? 'bg-slate-400 cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                }`}
+              >
+                {isScraping ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" /> Processing...
+                  </span>
+                ) : (
+                  'Start Extraction'
+                )}
+              </button>
+            </form>
+
+            {/* LIVE LOGS */}
+            <div className="mt-6 bg-slate-900 rounded-lg p-4 font-mono text-xs text-green-400 h-48 overflow-y-auto custom-scrollbar">
+              <div className="text-slate-500 border-b border-slate-800 pb-2 mb-2">Server Logs</div>
+              {logs.length === 0 && <span className="text-slate-600">Waiting for input...</span>}
+              {logs.map((log, idx) => (
+                <div key={idx} className="mb-1">
+                  <span className="text-slate-500">[{log.time}]</span> {log.message}
+                </div>
+              ))}
+              {isScraping && (
+                <div className="mt-2 text-blue-400 animate-pulse">... Backend is scraping Google Maps ...</div>
+              )}
+            </div>
+            
+            {error && (
+               <div className="mt-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg flex items-start gap-2">
+                 <AlertCircle className="w-4 h-4 mt-0.5" />
+                 {error}
+               </div>
+            )}
+          </div>
+
+          {/* RESULTS TABLE */}
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden min-h-[500px]">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">Scraped Results</h2>
+                <p className="text-sm text-slate-500">{leads.length} businesses found</p>
+              </div>
+              
+              {/* Only show download button if we have leads */}
+              {leads.length > 0 && (
+                <button
+                  onClick={downloadCSV}
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  <Download className="w-4 h-4" /> Export CSV
+                </button>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-auto p-0 relative">
+              {leads.length === 0 ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-12">
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                    <Search className="w-8 h-8 opacity-50" />
+                  </div>
+                  <p>No data yet. Start a new extraction to see real results.</p>
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-slate-50 sticky top-0 z-10">
+                    <tr>
+                      <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Business Name</th>
+                      <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Contact</th>
+                      <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Rating</th>
+                      <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Website</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {leads.map((lead, index) => (
+                      <tr key={index} className="hover:bg-blue-50/50 transition-colors group">
+                        <td className="p-4">
+                          <div className="font-medium text-slate-900">{lead.name}</div>
+                          <div className="text-xs text-slate-500 flex items-center gap-1 mt-1">
+                            <MapPin className="w-3 h-3" /> {lead.address}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <Phone className="w-3 h-3" /> {lead.phone || 'N/A'}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-1">
+                            <span className={`text-sm font-bold px-2 py-0.5 rounded ${Number(lead.rating) >= 4.0 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                              {lead.rating || 'N/A'}
+                            </span>
+                            <span className="text-xs text-slate-400">({lead.reviews || 0})</span>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          {lead.website ? (
+                            <a href={lead.website} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1 text-blue-600 hover:underline">
+                              <Globe className="w-3 h-3" /> Visit
+                            </a>
+                          ) : (
+                            <div className="flex items-center gap-1 text-xs text-red-500 font-medium bg-red-50 px-2 py-1 rounded w-fit">
+                              <AlertCircle className="w-3 h-3" /> No Site
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
