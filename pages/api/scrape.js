@@ -13,9 +13,12 @@ export const config = {
   maxDuration: 300, // 5 minutes for Vercel, but Next.js dev server doesn't have this limit
 };
 
-export default async function handler(req, res) {
+// Main handler function
+async function handleRequest(req, res) {
   // Set JSON content type header immediately
-  res.setHeader('Content-Type', 'application/json');
+  if (!res.headersSent) {
+    res.setHeader('Content-Type', 'application/json');
+  }
   
   // Set a timeout for the entire request (5 minutes)
   const timeout = setTimeout(() => {
@@ -36,11 +39,15 @@ export default async function handler(req, res) {
       } catch (err) {
         console.error('[API] Error sending JSON response:', err);
         if (!res.headersSent) {
-          res.status(500).json({ 
-            success: false,
-            message: 'Failed to send response',
-            error: err.message 
-          });
+          try {
+            res.status(500).json({ 
+              success: false,
+              message: 'Failed to send response',
+              error: err.message 
+            });
+          } catch (finalErr) {
+            console.error('[API] Critical: Cannot send any response:', finalErr);
+          }
         }
       }
     }
@@ -67,7 +74,8 @@ export default async function handler(req, res) {
       console.error('[API] Database connection error:', dbError);
       return sendJSON(500, { 
         success: false,
-        message: 'Database connection failed: ' + dbError.message 
+        message: 'Database connection failed: ' + dbError.message,
+        error: process.env.NODE_ENV === 'development' ? dbError.stack : undefined
       });
     }
     
@@ -91,7 +99,8 @@ export default async function handler(req, res) {
       
       // Check if it's a Puppeteer launch error
       if (scraperError.message.includes('Could not find Chrome') || 
-          scraperError.message.includes('Executable doesn\'t exist')) {
+          scraperError.message.includes('Executable doesn\'t exist') ||
+          scraperError.message.includes('No usable sandbox')) {
         return sendJSON(500, { 
           success: false,
           message: 'Puppeteer cannot find Chrome. Please install Chrome or Chromium.',
@@ -155,6 +164,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('[API] Unexpected error:', error);
+    console.error('[API] Error stack:', error.stack);
     return sendJSON(500, { 
       success: false,
       message: error.message || 'Internal server error',
@@ -163,3 +173,29 @@ export default async function handler(req, res) {
   }
 }
 
+// Export handler with error wrapper to catch ALL errors including import errors
+export default async function handler(req, res) {
+  try {
+    return await handleRequest(req, res);
+  } catch (error) {
+    // Catch any error that happens before or during handler execution
+    console.error('[API] CRITICAL: Unhandled error in handler wrapper:', error);
+    console.error('[API] Error stack:', error.stack);
+    
+    // Try to send JSON error response
+    if (!res.headersSent) {
+      try {
+        res.setHeader('Content-Type', 'application/json');
+        res.status(500).json({
+          success: false,
+          message: 'Critical server error: ' + (error.message || 'Unknown error'),
+          error: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+          type: 'HandlerWrapperError'
+        });
+      } catch (sendError) {
+        // If we can't send JSON, log it
+        console.error('[API] CRITICAL: Cannot send error response:', sendError);
+      }
+    }
+  }
+}
