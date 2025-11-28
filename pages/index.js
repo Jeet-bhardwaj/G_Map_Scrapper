@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Download, Search, Database, MapPin, Loader2, AlertCircle, Building2, Phone, Globe, Star, Filter } from 'lucide-react';
+import Image from 'next/image';
 
 export default function LeadScraperDashboard() {
   const [keyword, setKeyword] = useState('');
@@ -206,12 +207,23 @@ export default function LeadScraperDashboard() {
         
         {/* HEADER */}
         <header className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <div>
-            <h1 className="text-3xl font-bold text-blue-700 flex items-center gap-2">
-              <Database className="w-8 h-8" />
-              KTYM Lead Generation Engine
-            </h1>
-            <p className="text-slate-500 mt-1">Powerful Google Maps Scraper for Local Business Leads</p>
+          <div className="flex items-center gap-4">
+            <div className="relative w-20 h-20 flex-shrink-0">
+              <Image
+                src="/logo.png"
+                alt="KTYM Logo"
+                fill
+                className="object-contain"
+                priority
+                sizes="80px"
+              />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                KTYM Lead Generation Engine
+              </h1>
+              <p className="text-slate-500 mt-1">Powerful Google Maps Scraper for Local Business Leads</p>
+            </div>
           </div>
           <div className="flex items-center gap-3 mt-4 md:mt-0 bg-blue-50 px-4 py-2 rounded-full border border-blue-100">
             <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
