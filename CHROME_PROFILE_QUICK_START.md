@@ -1,37 +1,93 @@
 # Quick Start: Using Your Chrome Profile
 
-## Before Each Scraping Session
+## ⚠️ CRITICAL: Chrome MUST be completely closed!
 
-### 1. Close All Chrome Windows
+Your Chrome browser locks the profile when it's running. You'll see "Not signed in" or "Person 1" if Chrome is still running in the background.
 
-**Windows - Quick Method:**
+## 🚀 Easy Way - Use the Script
+
 ```powershell
-# Run this command to close all Chrome processes
+.\start-with-profile.ps1
+```
+
+This script automatically:
+1. Closes all Chrome processes
+2. Closes any Node processes
+3. Waits 2 seconds
+4. Starts the scraper with your profile
+
+## 📋 Manual Way
+
+### Step 1: Close ALL Chrome Windows
+
+**Method A - PowerShell Command:**
+```powershell
 Get-Process chrome -ErrorAction SilentlyContinue | Stop-Process -Force
 ```
 
-**Or manually:**
-- Close all Chrome browser windows
-- Check system tray for hidden Chrome icon and close it
-- Press `Ctrl+Shift+Esc` → Task Manager → End all "Google Chrome" tasks
+**Method B - Task Manager:**
+1. Press `Ctrl+Shift+Esc`
+2. Find ALL "Google Chrome" processes
+3. Right-click → End Task (do this for EVERY Chrome process)
+4. Check system tray (bottom-right) for hidden Chrome icon
 
-### 2. Start the Scraper
+**Method C - Command Prompt:**
+```cmd
+taskkill /F /IM chrome.exe
+```
+
+### Step 2: Verify Chrome is Closed
+
+```powershell
+Get-Process chrome -ErrorAction SilentlyContinue
+```
+
+If you see nothing → Chrome is closed ✅
+If you see processes → Chrome is still running ❌ (repeat Step 1)
+
+### Step 3: Start the Scraper
 
 ```powershell
 npm run dev
 ```
 
-You should see:
+Watch the logs - you should see:
 ```
-[Scraper] Using Chrome profile: Default
-[Scraper] Profile directory: C:\Users\bhard\AppData\Local\Google\Chrome\User Data
+[Scraper] Attempting to use Chrome profile: Default
+[Scraper] ✅ Successfully launched with Chrome profile
 ```
 
-### 3. Run Your Scraping
+### Step 4: Test
 
-- Visit http://localhost:3001
-- The scraper will open Chrome with your logged-in Google account
-- You'll have access to your Google Maps history, preferences, and logged-in state
+1. Visit: http://localhost:3001
+2. Enter: "Gym" in "Patna"
+3. Click "Start Extraction"
+4. Watch Chrome open with YOUR logged-in Google account
+
+---
+
+## ✅ How to Verify It's Working
+
+When Chrome opens, you should see:
+- ✅ Your Google profile picture (top-right)
+- ✅ Your email/name instead of "Person 1"
+- ✅ "Signed in" status
+- ✅ Your browsing history/bookmarks
+
+If you see "Person 1" or "Not signed in":
+- ❌ Chrome was still running
+- ❌ Profile was locked
+- Solution: Close Chrome completely and try again
+
+---
+
+## 🎯 One-Line Command (Recommended)
+
+```powershell
+Get-Process chrome -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Seconds 2; npm run dev
+```
+
+This closes Chrome, waits 2 seconds, then starts the scraper.
 
 ---
 
