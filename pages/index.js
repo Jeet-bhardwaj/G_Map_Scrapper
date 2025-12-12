@@ -6,6 +6,7 @@ export default function LeadScraperDashboard() {
   const [keyword, setKeyword] = useState('');
   const [location, setLocation] = useState('');
   const [minRating, setMinRating] = useState('0');
+  const [minReviews, setMinReviews] = useState('0');
   const [maxResults, setMaxResults] = useState('50');
   const [isScraping, setIsScraping] = useState(false);
   const [leads, setLeads] = useState([]);
@@ -288,6 +289,24 @@ export default function LeadScraperDashboard() {
                     <option value="4.5">4.5+ Stars</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Minimum Reviews</label>
+                <select
+                  value={minReviews}
+                  onChange={(e) => setMinReviews(e.target.value)}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                >
+                  <option value="0">No Filter</option>
+                  <option value="10">10+ Reviews</option>
+                  <option value="20">20+ Reviews</option>
+                  <option value="30">30+ Reviews</option>
+                  <option value="50">50+ Reviews</option>
+                  <option value="100">100+ Reviews</option>
+                  <option value="200">200+ Reviews</option>
+                  <option value="500">500+ Reviews</option>
+                </select>
               </div>
 
               <div>

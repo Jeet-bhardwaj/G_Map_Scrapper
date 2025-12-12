@@ -58,13 +58,14 @@ async function handleRequest(req, res) {
       return sendJSON(405, { message: 'Method Not Allowed' });
     }
 
-    const { keyword, location, minRating = 0, maxResults = 50 } = req.body;
+    const { keyword, location, minRating = 0, minReviews = 0, maxResults = 50 } = req.body;
 
     if (!keyword || !location) {
       return sendJSON(400, { message: 'Keyword and location are required' });
     }
 
     console.log(`[API] Starting scrape for: ${keyword} in ${location}`);
+    console.log(`[API] Filters - Min Rating: ${minRating}, Min Reviews: ${minReviews}`);
 
     // Connect to database
     try {
@@ -83,10 +84,10 @@ async function handleRequest(req, res) {
     let leads = [];
     try {
       console.log('[API] Starting Puppeteer scraper...');
-      console.log('[API] Parameters:', { keyword, location, minRating, maxResults });
+      console.log('[API] Parameters:', { keyword, location, minRating, minReviews, maxResults });
       
       // Wrap scraper in a promise with timeout
-      const scraperPromise = scrapeGoogleMaps(keyword, location, minRating, maxResults);
+      const scraperPromise = scrapeGoogleMaps(keyword, location, minRating, minReviews, maxResults);
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Scraper timeout after 4 minutes')), 240000)
       );
@@ -156,11 +157,13 @@ async function handleRequest(req, res) {
       });
     }
 
+    // Return the original scraped leads (with phone numbers), not the DB documents
+    // This ensures phone numbers are included in the response
     return sendJSON(200, {
       success: true,
       count: leads.length,
       newlySaved: savedCount,
-      data: savedLeads.length > 0 ? savedLeads : leads
+      data: leads // Return original scraped data with phone numbers
     });
   } catch (error) {
     console.error('[API] Unexpected error:', error);
