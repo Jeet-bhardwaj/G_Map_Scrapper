@@ -1,21 +1,21 @@
 @echo off
 echo.
 echo ========================================
-echo   KTYM Lead Scraper - Chrome Profile
+echo   KTYM Lead Scraper - Brave Browser
 echo ========================================
 echo.
-echo [1/3] Closing Chrome...
-taskkill /F /IM chrome.exe >nul 2>&1
+echo [1/3] Closing Brave...
+taskkill /F /IM brave.exe >nul 2>&1
 if %errorlevel% equ 0 (
-    echo       Chrome closed successfully
+    echo       Brave closed successfully
 ) else (
-    echo       No Chrome processes found
+    echo       No Brave processes found
 )
 echo.
 echo [2/3] Closing Node processes...
 taskkill /F /IM node.exe >nul 2>&1
 echo.
-echo [3/3] Starting scraper with your profile...
+echo [3/3] Starting scraper with your Brave profile...
 timeout /t 2 /nobreak >nul
 echo.
 echo ========================================
